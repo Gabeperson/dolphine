@@ -31,6 +31,18 @@ pub static WEBSOCKET_PORT: &'static str = stringify!(8080);
 pub static FUNCTION_STORE: Lazy<Mutex<HashMap<String, (usize, Function)>>> =
     Lazy::new(|| Default::default());
 
+
+
+macro_rules! async_function {
+    ($func_name: ident) => {
+        |input| {
+            $tokio::task::spawn(async move {
+                $func_name(input)
+            }).await
+        }
+    }
+}
+
 pub async fn block() {
     tokio::signal::ctrl_c()
         .await
