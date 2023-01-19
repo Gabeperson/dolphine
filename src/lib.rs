@@ -22,6 +22,7 @@ type Function = fn(String) -> Result<String, RustCallError>;
 pub static WEBSERVER_PORT: usize = 8000;
 static F: Dir<'_> = include_dir!("web");
 pub static mut FILES: &Dir = &F;
+pub static mut FILES_IN_USE: bool = false;
 pub static WORKER_COUNT: usize = 1;
 pub static HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub static SERVE_PATH: &'static str = "dolphine.js";
@@ -34,6 +35,15 @@ pub async fn block() {
     tokio::signal::ctrl_c()
         .await
         .expect("Failed to wait for ctrl c");
+}
+
+pub fn set_files_directory(dir: &'static Dir) {
+    unsafe {
+        if FILES_IN_USE {
+            panic!("Don't use the set_files function after you start the rocket server!");
+        }
+        FILES = dir;
+    }
 }
 
 pub fn register_function<T>(name: T, function: Function, num_args: usize)
@@ -221,6 +231,9 @@ pub fn start_websocket_thread() {
 }
 
 pub fn start_rocket_thread() {
+    unsafe {
+        FILES_IN_USE = true;
+    }
     let _rocket_thread = tokio::task::spawn(async {
         let figment = rocket::Config::figment()
             .merge(("address", HTTP_ADDR))
