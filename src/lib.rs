@@ -35,10 +35,10 @@ pub static FUNCTION_STORE: Lazy<Mutex<HashMap<String, (usize, Function)>>> =
 #[macro_export]
 macro_rules! async_function {
     ($func_name: ident) => {
-        |input| {
+        |input: String| -> Result<String, $crate::Error>{
             $crate::tokio::task::spawn(async move {
                 $func_name(input).await
-            }).join().expect("Joining the thread failed!")
+            }).await.expect("Joining the thread failed!")
         }
     }
 }
