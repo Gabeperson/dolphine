@@ -20,7 +20,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 type Function = fn(String) -> Result<String, RustCallError>;
 pub static WEBSERVER_PORT: usize = 8000;
-static F: Dir<'_> = include_dir!("web");
+static F: Dir = include_dir!("web");
 pub static mut FILES: &Dir = &F;
 pub static mut FILES_IN_USE: bool = false;
 pub static WORKER_COUNT: usize = 1;
@@ -32,7 +32,7 @@ pub static FUNCTION_STORE: Lazy<Mutex<HashMap<String, (usize, Function)>>> =
     Lazy::new(|| Default::default());
 
 
-
+#[macro_export]
 macro_rules! async_function {
     ($func_name: ident) => {
         |input| {
@@ -42,6 +42,7 @@ macro_rules! async_function {
         }
     }
 }
+
 
 pub async fn block() {
     tokio::signal::ctrl_c()
