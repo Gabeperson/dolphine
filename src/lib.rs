@@ -13,7 +13,7 @@ use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
-use tokio;
+pub use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
@@ -35,10 +35,15 @@ pub static FUNCTION_STORE: Lazy<Mutex<HashMap<String, (usize, Function)>>> =
 #[macro_export]
 macro_rules! async_function {
     ($func_name: ident) => {
-        |input: String| -> Result<String, $crate::Error>{
-            $crate::tokio::task::spawn(async move {
-                $func_name(input).await
-            }).await.expect("Joining the thread failed!")
+        |input| {
+            $crate::tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+                    return $func_name(input).await;
+                })
+
         }
     }
 }
@@ -142,16 +147,16 @@ fn get_file(path: &str) -> Option<(ContentType, String)> {
 }
 
 async fn accept_connection(stream: TcpStream) {
-    let addr = stream
-        .peer_addr()
-        .expect("connected streams should have a peer address");
-    println!("Peer address: {}", addr);
+    //let addr = stream
+        //.peer_addr()
+        //.expect("connected streams should have a peer address");
+    //println!("Peer address: {}", addr);
 
     let ws_stream = tokio_tungstenite::accept_async(stream)
         .await
         .expect("Error during the websocket handshake occurred");
 
-    println!("New WebSocket connection: {}", addr);
+    //println!("New WebSocket connection: {}", addr);
 
     let (mut write, read) = ws_stream.split();
     // We should not forward messages other than text or binary.
