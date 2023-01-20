@@ -38,7 +38,7 @@ macro_rules! async_function {
         |input| {
             $crate::tokio::task::spawn(async move {
                 $func_name(input).await
-            }).join()
+            }).join().expect("Joining the thread failed!")
         }
     }
 }
