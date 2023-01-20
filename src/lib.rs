@@ -36,7 +36,7 @@ pub static FUNCTION_STORE: Lazy<Mutex<HashMap<String, (usize, Function)>>> =
 macro_rules! async_function {
     ($func_name: ident) => {
         |input| {
-            $tokio::task::spawn(async move {
+            $crate::tokio::task::spawn(async move {
                 $func_name(input)
             }).await
         }
