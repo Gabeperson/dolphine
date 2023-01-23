@@ -1,28 +1,45 @@
 const dolphine = {
       _socketAddr: "127.0.0.1",
       _socketPort: "8080",
-      _responses: [],
-      _pollingDelay: 50, // ms
-      _current_id: 0,
+      _promises: [],
+      _currentId: 0,
 
       _init: function() {
             this._websocket = new WebSocket(`ws://${this._socketAddr}:${this._socketPort}`)
             this._websocket.onmessage = (message) => {
                   let data = JSON.parse(message.data);
                   if (data.actiontype == 0) { // run when server response comes back
-                        this._responses.push(data);
+                        this._rustReturn(data);
                   } else if (data.actiontype == 2) { // run when server (rust) registers a rust function in javascript
-                        this._rustRegister(data)
+                        this._rustRegister(data);
                   } else {
                         return // impossible to reach
                   }
             }
       },
 
-      _genId: () => {
-            let id = this._current_id;
-            this._current_id += 1;
+      _genId: function() {
+            let id = this._currentId;
+            this._currentId += 1;
             return String(id);
+      },
+
+      _rustReturn: function(receivedData) {
+            let promise;
+            for (let data of this._promises) {
+                  if (data.id == receivedData.id) {
+                        promise = data;
+                        this._promises.pop(this._promises.indexOf(promise));
+                        break;
+                  }
+            }
+            if (receivedData.success != true) {
+                  console.log(receivedData);
+                  promise.reject(receivedData.data)
+                  return;
+            }
+            promise.resolve(receivedData.data);
+            return;
       },
 
       _rustRegister: function(data) {
@@ -41,25 +58,15 @@ const dolphine = {
                         function: functionName,
                         actiontype: 1,
                   }
+                  let resolve;
+                  let reject;
+                  let promise = new Promise(function(insideResolve, insideReject) {
+                        resolve = insideResolve;
+                        reject = insideReject;
+                  });
+                  this._promises.push({id, resolve, reject});
                   this._websocket.send(JSON.stringify(data));
-                  let reply;
-                  while (true) {
-                        for (let data of this._responses) {
-                              if (data.id == id) {
-                                    reply = data;
-                                    this._responses.pop(this._responses.indexOf(reply));
-                                    break;
-                              }
-                        }
-                        if (reply) {
-                              break;
-                        }
-                        await new Promise(r => setTimeout(r, 50));
-                  }
-                  if (reply.success != true) {
-                        throw {name: "RustFunctionFailed", message: `The function on the rust side failed: ${reply.data}`}
-                  }
-                  return reply.data;
+                  return promise;
             }
       },
 };

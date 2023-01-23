@@ -48,6 +48,9 @@ macro_rules! async_function {
     }
 }
 
+pub fn open_page() {
+    _ = webbrowser::open("localhost:8000");
+}
 
 pub async fn block() {
     tokio::signal::ctrl_c()
@@ -74,7 +77,7 @@ where
 
 #[derive(Error, Debug)]
 pub enum RustCallError {
-    #[error("data store disconnected")]
+    #[error("Error in rust function: {0}")]
     Error(String),
 }
 pub use RustCallError::Error;
@@ -144,6 +147,15 @@ fn get_file(path: &str) -> Option<(ContentType, String)> {
         }
     }
     return None;
+}
+
+pub async fn init(opt_block: bool) {
+    start_rocket_thread();
+    start_websocket_thread();
+    open_page();
+    if opt_block {
+        block().await;
+    }
 }
 
 async fn accept_connection(stream: TcpStream) {
