@@ -17,10 +17,14 @@ pub use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
+use rocket::State;
+
 
 type Function = fn(String) -> Result<String, RustCallError>;
-pub static WEBSERVER_PORT: usize = 8000;
 static F: Dir = include_dir!("web");
+
+/*
+pub static WEBSERVER_PORT: usize = 8000;
 pub static mut FILES: &Dir = &F;
 pub static mut FILES_IN_USE: bool = false;
 pub static WORKER_COUNT: usize = 1;
@@ -30,6 +34,122 @@ pub static WEBSOCKET_ADDR: &'static str = "127.0.0.1";
 pub static WEBSOCKET_PORT: &'static str = stringify!(8080);
 pub static FUNCTION_STORE: Lazy<Mutex<HashMap<String, (usize, Function)>>> =
     Lazy::new(|| Default::default());
+*/
+
+pub struct Dolphine<'a> {
+    webserver_port: usize,
+    source_static: &'a Dir<'a>,
+    source_dynamic: String,
+    worker_count: usize,
+    http_addr: IpAddr,
+    serve_path: String,
+    websocket_addr: String,
+    websocket_port: String,
+    function_store: HashMap<String, (usize, Function)>,
+    source_type: TypeSource,
+}
+
+enum TypeSource {
+    LocalFolder,
+    StaticFolder,
+}
+
+trait WebSource {
+    fn get_source_type(&self) -> TypeSource;
+}
+
+impl Dolphine<'_> {
+    pub fn open_page(&self) {
+        _ = webbrowser::open(&format!("{}:{}", self.http_addr.to_string(), self.webserver_port));
+    }
+
+    pub async fn block(&self) {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Failed to wait for ctrl c");
+    }
+
+    pub fn set_files_directory(dir: &'static Dir) {
+        todo!();
+    }
+
+    pub async fn init(&self, opt_block: bool) {
+        self.start_rocket_thread();
+        self.start_websocket_thread();
+        self.open_page();
+        if opt_block {
+            self.block().await;
+        }
+    }
+
+    pub fn register_function<T>(&mut self, name: T, function: Function, num_args: usize)
+        where
+            T: ToString,
+        {
+            // add function to the hashmap
+            self.function_store.insert(name.to_string(), (num_args, function));
+        }
+
+    pub fn start_websocket_thread(&self) {
+        let _websocket_thread = tokio::task::spawn(async {
+            let try_socket = TcpListener::bind(&format!("{}:{}", self.websocket_addr, self.websocket_port)).await;
+            let listener = try_socket.expect("Failed to bind");
+            println!(
+                "Listening on: {}",
+                format!("{}:{}", self.websocket_addr, self.webserver_port)
+            );
+            let threads = Arc::new(Mutex::new(Vec::new()));
+            let threads_clone = threads.clone();
+            let socket_thread = tokio::task::spawn(async move {
+                while let Ok((stream, _)) = listener.accept().await {
+                    {
+                        let mut threads = threads_clone.lock().unwrap();
+                        threads.push(tokio::task::spawn(accept_connection(stream)));
+                    }
+                }
+            });
+            tokio::signal::ctrl_c()
+                .await
+                .expect("Failed to listen for ctrl c");
+            socket_thread.abort();
+            let join_handles = threads.lock().unwrap();
+            for join_handle in join_handles.iter() {
+                join_handle.abort();
+            }
+            println!("Aborted all socket threads");
+        });
+    }
+    
+    pub fn start_rocket_thread(&self) {
+        let _rocket_thread = tokio::task::spawn(async {
+            let figment = rocket::Config::figment()
+                .merge(("address", self.http_addr))
+                .merge(("workers", self.worker_count))
+                .merge(("port", self.webserver_port));
+            let mut _rocket = rocket::custom(figment)
+                .mount("/", routes![index, get_file]);
+
+            match self.source_type {
+                TypeSource::StaticFolder => {
+                    _rocket = _rocket.manage(Source::Static(self.source_static));
+                }
+                TypeSource::LocalFolder => {
+                    _rocket = _rocket.manage(Source::Local(self.source_dynamic));
+                }
+            }
+            let _rocket = _rocket
+                .launch()
+                .await
+                .unwrap();
+        });
+    }
+
+}
+
+enum Source<'a> {
+    Static(&'a Dir<'a>),
+    Local(String),
+}
 
 
 #[macro_export]
@@ -48,32 +168,7 @@ macro_rules! async_function {
     }
 }
 
-pub fn open_page() {
-    _ = webbrowser::open("localhost:8000");
-}
 
-pub async fn block() {
-    tokio::signal::ctrl_c()
-        .await
-        .expect("Failed to wait for ctrl c");
-}
-
-pub fn set_files_directory(dir: &'static Dir) {
-    unsafe {
-        if FILES_IN_USE {
-            panic!("Don't use the set_files function after you start the rocket server!");
-        }
-        FILES = dir;
-    }
-}
-
-pub fn register_function<T>(name: T, function: Function, num_args: usize)
-where
-    T: ToString,
-{
-    let mut funcs = FUNCTION_STORE.lock().unwrap();
-    funcs.insert(name.to_string(), (num_args, function));
-}
 
 #[derive(Error, Debug)]
 pub enum RustCallError {
@@ -115,7 +210,16 @@ struct FunctionRegister {
 }
 
 #[get("/")]
-fn index() -> Option<(ContentType, String)> {
+fn index(source: &State<Source>) -> Option<(ContentType, String)> {
+    match source {
+        Source::Local(f) => {
+            if let Some(file) = FILES.get_file("index.html") {
+                if let Some(s) = file.contents_utf8() {
+                    return Some((ContentType::HTML, s.to_string()));
+                }
+            }
+        }
+    }
     unsafe {
         if let Some(file) = FILES.get_file("index.html") {
             if let Some(s) = file.contents_utf8() {
@@ -147,15 +251,6 @@ fn get_file(path: &str) -> Option<(ContentType, String)> {
         }
     }
     return None;
-}
-
-pub async fn init(opt_block: bool) {
-    start_rocket_thread();
-    start_websocket_thread();
-    open_page();
-    if opt_block {
-        block().await;
-    }
 }
 
 async fn accept_connection(stream: TcpStream) {
@@ -230,49 +325,4 @@ async fn accept_connection(stream: TcpStream) {
     println!("Connection closed.");
 }
 
-pub fn start_websocket_thread() {
-    let _websocket_thread = tokio::task::spawn(async {
-        let try_socket = TcpListener::bind(&format!("{}:{}", WEBSOCKET_ADDR, WEBSOCKET_PORT)).await;
-        let listener = try_socket.expect("Failed to bind");
-        println!(
-            "Listening on: {}",
-            format!("{}:{}", WEBSOCKET_ADDR, WEBSOCKET_PORT)
-        );
-        let threads = Arc::new(Mutex::new(Vec::new()));
-        let threads_clone = threads.clone();
-        let socket_thread = tokio::task::spawn(async move {
-            while let Ok((stream, _)) = listener.accept().await {
-                {
-                    let mut threads = threads_clone.lock().unwrap();
-                    threads.push(tokio::task::spawn(accept_connection(stream)));
-                }
-            }
-        });
-        tokio::signal::ctrl_c()
-            .await
-            .expect("Failed to listen for ctrl c");
-        socket_thread.abort();
-        let join_handles = threads.lock().unwrap();
-        for join_handle in join_handles.iter() {
-            join_handle.abort();
-        }
-        println!("Aborted all socket threads");
-    });
-}
 
-pub fn start_rocket_thread() {
-    unsafe {
-        FILES_IN_USE = true;
-    }
-    let _rocket_thread = tokio::task::spawn(async {
-        let figment = rocket::Config::figment()
-            .merge(("address", HTTP_ADDR))
-            .merge(("workers", WORKER_COUNT))
-            .merge(("port", WEBSERVER_PORT));
-        _ = rocket::custom(figment)
-            .mount("/", routes![index, get_file])
-            .launch()
-            .await
-            .unwrap();
-    });
-}
