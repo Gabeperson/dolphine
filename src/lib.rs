@@ -20,6 +20,8 @@ use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
 use rocket::State;
 use std::sync::RwLock;
+//mod browsers;
+pub use include_dir::include_dir;
 
 
 type Function = fn(String) -> Result<String, RustCallError>;
