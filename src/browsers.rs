@@ -1,9 +1,9 @@
-use std::{path::Path};
+use std::path::Path;
+use std::process::Command;
 use winreg::{
     enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ},
     RegKey,
 };
-use std::process::Command;
 fn get_chrome_windows() -> Option<String> {
     let hkey_localmachine = RegKey::predef(HKEY_LOCAL_MACHINE);
     let hkey_currentuser = RegKey::predef(HKEY_CURRENT_USER);
@@ -70,10 +70,8 @@ fn get_firefox_windows() -> Option<String> {
             }
         }
     }
-    return None
+    return None;
 }
-
-
 
 pub struct Browser {
     browser: BrowserEnum,
@@ -82,17 +80,17 @@ pub struct Browser {
 impl Browser {
     pub fn chrome() -> Browser {
         Browser {
-            browser: BrowserEnum::Chrome
+            browser: BrowserEnum::Chrome,
         }
     }
     pub fn edge() -> Browser {
         Browser {
-            browser: BrowserEnum::Edge
+            browser: BrowserEnum::Edge,
         }
     }
     pub fn firefox() -> Browser {
         Browser {
-            browser: BrowserEnum::Firefox
+            browser: BrowserEnum::Firefox,
         }
     }
 }
@@ -103,15 +101,12 @@ enum BrowserEnum {
     Firefox,
 }
 
-
 pub fn open_browser(browser: Browser, url: String) {
     let path = match browser.browser {
         BrowserEnum::Chrome => {
             get_chrome_windows().expect("Couldn't find browser on this computer")
         }
-        BrowserEnum::Edge => {
-            get_edge_windows().expect("Couldn't find browser on this computer")
-        }
+        BrowserEnum::Edge => get_edge_windows().expect("Couldn't find browser on this computer"),
         BrowserEnum::Firefox => {
             get_firefox_windows().expect("Couldn't find browser on this computer")
         }

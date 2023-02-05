@@ -1,37 +1,34 @@
 use browsers::open_browser;
 use futures_util::{future, SinkExt, StreamExt, TryStreamExt};
-use include_dir::{Dir};
+use include_dir::Dir;
 use once_cell::sync::Lazy;
 use rocket;
-use std::fs;
 use rocket::get;
 use rocket::http::ContentType;
 use rocket::routes;
+use rocket::State;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_repr::*;
 use std::collections::HashMap;
+use std::fs;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
+use std::sync::RwLock;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 pub use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
-use rocket::State;
-use std::sync::RwLock;
 mod browsers;
-pub use include_dir::include_dir;
 pub use browsers::Browser;
-
+pub use include_dir::include_dir;
 
 type Function = fn(String) -> Result<String, RustCallError>;
 
+static DIRS: Lazy<RwLock<HashMap<usize, &Dir>>> = Lazy::new(|| Default::default());
 
-static DIRS: Lazy<RwLock<HashMap<usize, &Dir>>> =
-    Lazy::new(|| Default::default());
-    
 static DIRS_COUNTER: Lazy<RwLock<usize>> = Lazy::new(|| RwLock::new(0));
 
 #[derive(Clone, Debug)]
@@ -54,9 +51,7 @@ enum TypeSource {
     StaticFolder,
 }
 
-
 impl Dolphine {
-
     pub fn new() -> Dolphine {
         let mut id_gen = DIRS_COUNTER.write().unwrap();
         let id = *id_gen;
@@ -78,7 +73,10 @@ impl Dolphine {
     }
 
     pub fn open_page(&self, b: Browser) {
-        open_browser(b, format!("{}:{}", self.http_addr.to_string(), self.webserver_port));
+        open_browser(
+            b,
+            format!("{}:{}", self.http_addr.to_string(), self.webserver_port),
+        );
     }
 
     pub async fn block(&self) {
@@ -87,9 +85,9 @@ impl Dolphine {
             .expect("Failed to wait for ctrl c");
     }
 
-    pub fn set_local_file_directory<S>(&mut self, dir: S) 
+    pub fn set_local_file_directory<S>(&mut self, dir: S)
     where
-        S:ToString
+        S: ToString,
     {
         self.source = TypeSource::LocalFolder;
         let mut dirs = DIRS.write().unwrap();
@@ -98,15 +96,12 @@ impl Dolphine {
         self.source_dynamic = dir.to_string();
     }
 
-    pub fn set_static_file_directory(&mut self, dir: &'static Dir)
-    {
+    pub fn set_static_file_directory(&mut self, dir: &'static Dir) {
         self.source = TypeSource::StaticFolder;
         self.source_dynamic = String::new();
         let mut dirs = DIRS.write().unwrap();
         dirs.insert(self.id, dir);
     }
-
-
 
     pub async fn init(&self, opt_block: bool) {
         self.start_rocket_thread();
@@ -117,19 +112,24 @@ impl Dolphine {
     }
 
     pub fn register_function<T>(&mut self, name: T, function: Function, num_args: usize)
-        where
-            T: ToString,
-        {
-            // add function to the hashmap
-            self.function_store.insert(name.to_string(), (num_args, function));
-        }
+    where
+        T: ToString,
+    {
+        // add function to the hashmap
+        self.function_store
+            .insert(name.to_string(), (num_args, function));
+    }
 
     pub fn start_websocket_thread(&self) {
         let s = self.clone();
         let functions = self.function_store.clone();
         let _websocket_thread = tokio::task::spawn(async move {
-
-            let try_socket = TcpListener::bind(&format!("{}:{}", s.websocket_addr.to_string(), s.websocket_port.to_string())).await;
+            let try_socket = TcpListener::bind(&format!(
+                "{}:{}",
+                s.websocket_addr.to_string(),
+                s.websocket_port.to_string()
+            ))
+            .await;
             let listener = try_socket.expect("Failed to bind");
             println!(
                 "Listening on: {}",
@@ -141,7 +141,10 @@ impl Dolphine {
                 while let Ok((stream, _)) = listener.accept().await {
                     {
                         let mut threads = threads_clone.lock().unwrap();
-                        threads.push(tokio::task::spawn(accept_connection(stream, functions.clone())));
+                        threads.push(tokio::task::spawn(accept_connection(
+                            stream,
+                            functions.clone(),
+                        )));
                     }
                 }
             });
@@ -156,7 +159,7 @@ impl Dolphine {
             println!("Aborted all socket threads");
         });
     }
-    
+
     pub fn start_rocket_thread(&self) {
         let serve_path = self.serve_path.clone();
         let source = self.source.clone();
@@ -165,34 +168,39 @@ impl Dolphine {
         let worker_count = self.worker_count.clone();
         let webserver_port = self.webserver_port.clone();
         let id = self.id;
-        let wp = "\"".to_string() + &self.websocket_addr.to_string()[..] + ":" + &self.websocket_port.to_string()[..] + "\"";
-        
+        let wp = "\"".to_string()
+            + &self.websocket_addr.to_string()[..]
+            + ":"
+            + &self.websocket_port.to_string()[..]
+            + "\"";
+
         let _rocket_thread = tokio::task::spawn(async move {
-        let figment = rocket::Config::figment()
-            .merge(("address", http_addr))
-            .merge(("workers", worker_count))
-            .merge(("port", webserver_port));
-        let mut _rocket = rocket::custom(figment)
-            .mount("/", routes![index, get_file]);
+            let figment = rocket::Config::figment()
+                .merge(("address", http_addr))
+                .merge(("workers", worker_count))
+                .merge(("port", webserver_port));
+            let mut _rocket = rocket::custom(figment).mount("/", routes![index, get_file]);
 
-            
-        match source {
-            TypeSource::StaticFolder => {
-                _rocket = _rocket.manage(StateManager::new(Source::Static(id)/*Source::Static((s.source_static).clone())*/, serve_path, wp));
+            match source {
+                TypeSource::StaticFolder => {
+                    _rocket = _rocket.manage(StateManager::new(
+                        Source::Static(id), /*Source::Static((s.source_static).clone())*/
+                        serve_path,
+                        wp,
+                    ));
+                }
+                TypeSource::LocalFolder => {
+                    _rocket = _rocket.manage(StateManager::new(
+                        Source::Local(source_dynamic),
+                        serve_path,
+                        wp,
+                    ));
+                }
             }
-            TypeSource::LocalFolder => {
-                _rocket = _rocket.manage(StateManager::new(Source::Local(source_dynamic), serve_path, wp));
-            }
-        }
-        let _rocket = _rocket
-            .launch()
-            .await
-            .unwrap();
-    });
+            let _rocket = _rocket.launch().await.unwrap();
+        });
     }
-
 }
-
 
 #[derive(Debug, Clone)]
 enum Source {
@@ -209,10 +217,13 @@ struct StateManager {
 
 impl StateManager {
     fn new(s: Source, s1: String, wp: String) -> StateManager {
-        StateManager { source: s, serve_path: s1, websocket_path: wp}
+        StateManager {
+            source: s,
+            serve_path: s1,
+            websocket_path: wp,
+        }
     }
 }
-
 
 #[macro_export]
 macro_rules! async_function {
@@ -225,12 +236,9 @@ macro_rules! async_function {
                 .block_on(async {
                     return $func_name(input).await;
                 })
-
         }
-    }
+    };
 }
-
-
 
 #[derive(Error, Debug)]
 pub enum RustCallError {
@@ -295,30 +303,30 @@ fn index(statemanager: &State<StateManager>) -> Option<(ContentType, String)> {
 }
 
 #[get("/<path>")]
-fn get_file(path: &str, statemanager: &State<StateManager>, ) -> Option<(ContentType, Vec<u8>)> {
+fn get_file(path: &str, statemanager: &State<StateManager>) -> Option<(ContentType, Vec<u8>)> {
     if path == statemanager.serve_path {
         let mut resp = include_bytes!("..\\dolphine.js").to_vec();
-        let js_code = format!("\ndolphine._socket = {};\ndolphine._init();", statemanager.websocket_path);
+        let js_code = format!(
+            "\ndolphine._socket = {};\ndolphine._init();",
+            statemanager.websocket_path
+        );
         let path = js_code.as_bytes();
         resp.extend_from_slice(path);
-        return Some((
-            ContentType::JavaScript,
-            resp,
-        ));
+        return Some((ContentType::JavaScript, resp));
     }
     match &statemanager.source {
         Source::Static(f) => {
             let file_hashmap = DIRS.read().unwrap();
             if let Some(f) = file_hashmap.get(f) {
-            if let Some(file) = f.get_file("index.html") {
-                if let Some(ext) = path.split(".").last() {
-                    let s = file.contents();
-                    if let Some(content_type) = ContentType::from_extension(ext) {
-                        return Some((content_type, s.to_vec()));
+                if let Some(file) = f.get_file("index.html") {
+                    if let Some(ext) = path.split(".").last() {
+                        let s = file.contents();
+                        if let Some(content_type) = ContentType::from_extension(ext) {
+                            return Some((content_type, s.to_vec()));
+                        }
+                        return Some((ContentType::Text, s.to_vec()));
                     }
-                    return Some((ContentType::Text, s.to_vec()));
                 }
-            }
             }
         }
         Source::Local(f) => {
@@ -340,8 +348,8 @@ fn get_file(path: &str, statemanager: &State<StateManager>, ) -> Option<(Content
 
 async fn accept_connection(stream: TcpStream, functions: HashMap<String, (usize, Function)>) {
     //let addr = stream
-        //.peer_addr()
-        //.expect("connected streams should have a peer address");
+    //.peer_addr()
+    //.expect("connected streams should have a peer address");
     //println!("Peer address: {}", addr);
 
     let ws_stream = tokio_tungstenite::accept_async(stream)
@@ -408,5 +416,3 @@ async fn accept_connection(stream: TcpStream, functions: HashMap<String, (usize,
         .await;
     println!("Connection closed.");
 }
-
-
