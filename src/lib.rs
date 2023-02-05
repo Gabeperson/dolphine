@@ -1,3 +1,4 @@
+use browsers::open_browser;
 use futures_util::{future, SinkExt, StreamExt, TryStreamExt};
 use include_dir::{Dir};
 use once_cell::sync::Lazy;
@@ -20,8 +21,9 @@ use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
 use rocket::State;
 use std::sync::RwLock;
-//mod browsers;
+mod browsers;
 pub use include_dir::include_dir;
+pub use browsers::Browser;
 
 
 type Function = fn(String) -> Result<String, RustCallError>;
@@ -75,8 +77,8 @@ impl Dolphine {
         }
     }
 
-    pub fn open_page(&self) {
-        _ = webbrowser::open(&format!("{}:{}", self.http_addr.to_string(), self.webserver_port));
+    pub fn open_page(&self, b: Browser) {
+        open_browser(b, format!("{}:{}", self.http_addr.to_string(), self.webserver_port));
     }
 
     pub async fn block(&self) {
@@ -109,7 +111,6 @@ impl Dolphine {
     pub async fn init(&self, opt_block: bool) {
         self.start_rocket_thread();
         self.start_websocket_thread();
-        self.open_page();
         if opt_block {
             self.block().await;
         }
