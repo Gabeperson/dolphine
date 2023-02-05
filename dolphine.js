@@ -1,11 +1,10 @@
 const dolphine = {
-      _socketAddr: "127.0.0.1",
-      _socketPort: "8080",
+      _socket: "127.0.0.1:8000",
       _promises: [],
       _currentId: 0,
 
       _init: function() {
-            this._websocket = new WebSocket(`ws://${this._socketAddr}:${this._socketPort}`)
+            this._websocket = new WebSocket(`ws://${this._socket}`)
             this._websocket.onmessage = (message) => {
                   let data = JSON.parse(message.data);
                   if (data.actiontype == 0) { // run when server response comes back
@@ -70,5 +69,3 @@ const dolphine = {
             }
       },
 };
-
-dolphine._init()
