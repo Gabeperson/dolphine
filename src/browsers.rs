@@ -116,8 +116,10 @@ pub fn open_browser(browser: Browser, url: String) {
             get_firefox_windows().expect("Couldn't find browser on this computer")
         }
     };
-
-    let path = format!("{} --app={} --new-window", path, url);
-    let split: Vec<&str> = path.split(" ").collect();
-    let _command = Command::new(split[0]).args(&split[1..]).output().ok();
+    //println!("{}", path);
+    let mut binding = Command::new(path);
+    let _command = binding.args(format!("--app=http://{} --new-window", url).split(" "));
+    _command.spawn().ok();
+    //println!("{:?}", _command.get_args());
+    //println!("{}", path);
 }
