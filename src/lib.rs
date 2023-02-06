@@ -24,6 +24,7 @@ use tokio_tungstenite::tungstenite::Message;
 mod browsers;
 pub use browsers::Browser;
 pub use include_dir::include_dir;
+pub use include_dir::Dir;
 
 type Function = fn(String) -> Result<String, RustCallError>;
 
