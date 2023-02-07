@@ -8,7 +8,7 @@ use rocket::http::ContentType;
 use rocket::routes;
 use rocket::State;
 use serde::{Deserialize, Serialize};
-use serde_json;
+pub use serde_json;
 use serde_repr::*;
 use std::collections::HashMap;
 use std::fs;
