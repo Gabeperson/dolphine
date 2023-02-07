@@ -23,6 +23,7 @@ use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
 mod browsers;
 pub use browsers::Browser;
+pub use macros::function;
 
 type Function = fn(String) -> Result<String, RustCallError>;
 
