@@ -12,10 +12,10 @@ tokio-tungstenite = "*"
 rocket = { git = "https://github.com/SergioBenitez/Rocket", rev = "6778089" }
 include_dir = { version = "0.7.3"}
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
-thiserror = "1.0"
 serde = "1.0.152"
 serde_json = "1.0.91"
 once_cell = "1.16.0"
 serde_repr = "0.1"
 winreg = "0.10.1"
 macros = {version = "*", path = "macros"}
+eyre = "0.6.8"

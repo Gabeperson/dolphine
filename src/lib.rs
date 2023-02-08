@@ -1,8 +1,9 @@
 use browsers::open_browser;
 use futures_util::{future, SinkExt, StreamExt, TryStreamExt};
+pub use include_dir;
 use include_dir::Dir;
 use once_cell::sync::Lazy;
-use rocket;
+pub use rocket;
 use rocket::get;
 use rocket::http::ContentType;
 use rocket::routes;
@@ -16,7 +17,6 @@ use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::sync::RwLock;
 use std::sync::{Arc, Mutex};
-use thiserror::Error;
 pub use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite;
@@ -25,9 +25,10 @@ mod browsers;
 pub use browsers::Browser;
 //extern crate macros;
 pub use macros::function;
+pub use eyre::Report;
 
 
-type Function = fn(String) -> Result<String, RustCallError>;
+type Function = fn(String) -> Result<String, Report>;
 
 static DIRS: Lazy<RwLock<HashMap<usize, &Dir>>> = Lazy::new(|| Default::default());
 
@@ -242,13 +243,6 @@ macro_rules! async_function {
     };
 }
 
-#[derive(Error, Debug)]
-pub enum RustCallError {
-    #[error("Error in rust function: {0}")]
-    Error(String),
-}
-pub use RustCallError::Error;
-
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(u8)]
 enum MessageType {
@@ -399,7 +393,7 @@ async fn accept_connection(stream: TcpStream, functions: HashMap<String, (usize,
                     }
                     Err(e) => {
                         success = false;
-                        e.to_string()
+                        format!("{:#}", e)
                     }
                 }
             }
