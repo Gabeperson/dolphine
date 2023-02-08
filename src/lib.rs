@@ -8,7 +8,7 @@ use rocket::http::ContentType;
 use rocket::routes;
 use rocket::State;
 use serde::{Deserialize, Serialize};
-use serde_json;
+pub use serde_json;
 use serde_repr::*;
 use std::collections::HashMap;
 use std::fs;
@@ -23,6 +23,9 @@ use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
 mod browsers;
 pub use browsers::Browser;
+//extern crate macros;
+pub use macros::function;
+
 
 type Function = fn(String) -> Result<String, RustCallError>;
 

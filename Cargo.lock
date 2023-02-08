@@ -323,6 +323,7 @@ version = "0.1.0"
 dependencies = [
  "futures-util",
  "include_dir",
+ "macros",
  "once_cell",
  "rocket",
  "serde",
@@ -765,6 +766,14 @@ dependencies = [
  "serde_json",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "macros"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
