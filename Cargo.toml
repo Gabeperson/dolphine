@@ -19,3 +19,4 @@ once_cell = "1.16.0"
 serde_repr = "0.1"
 webbrowser = "0.8.4"
 winreg = "0.10.1"
+macros = {version = "*", path = "macros"}

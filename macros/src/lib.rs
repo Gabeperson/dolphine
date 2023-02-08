@@ -1,9 +1,8 @@
 use std::str::FromStr;
 use proc_macro::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use quote::quote;
 use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
-use syn::{ItemFn, FnArg, AttributeArgs, parse_macro_input, NestedMeta, Meta, Token, Pat, Type};
+use syn::{ItemFn, FnArg, parse_macro_input, Token, Pat, Type};
 use syn;
 use syn::Stmt;
 
@@ -100,7 +99,7 @@ pub fn function(
         s2.push_str(", ");
     }
     s.push_str(")");
-    s2.push_str(") = ::dolphine::serde_json::from_str(input).unwrap();"); // change unwrap to result
+    s2.push_str(") = ::dolphine::serde_json::from_str(&input).unwrap();"); // change unwrap to result
     s.push_str(&s2);
     // dbg!(&s);
 
@@ -109,7 +108,7 @@ pub fn function(
         func.block.stmts.insert(0, stmt);
     }
 
-    println!("{}", s);
+    //println!("{}", s);
     // add s to fn here
     let stmt: Stmt = syn::parse(TokenStream::from_str(&s).unwrap()).unwrap();
     func.block.stmts.insert(0, stmt);
