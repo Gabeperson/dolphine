@@ -26,6 +26,7 @@ pub use browsers::Browser;
 //extern crate macros;
 pub use macros::function;
 
+
 type Function = fn(String) -> Result<String, RustCallError>;
 
 static DIRS: Lazy<RwLock<HashMap<usize, &Dir>>> = Lazy::new(|| Default::default());
