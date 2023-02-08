@@ -1,9 +1,8 @@
 use browsers::open_browser;
 use futures_util::{future, SinkExt, StreamExt, TryStreamExt};
-pub use include_dir;
-use include_dir::Dir;
+pub use include_dir::{Dir, include_dir};
 use once_cell::sync::Lazy;
-pub use rocket;
+use rocket;
 use rocket::get;
 use rocket::http::ContentType;
 use rocket::routes;
