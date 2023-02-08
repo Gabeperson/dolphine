@@ -99,7 +99,7 @@ pub fn function(
         s2.push_str(", ");
     }
     s.push_str(")");
-    s2.push_str(") = ::dolphine::serde_json::from_str(&input).unwrap();"); // change unwrap to result
+    s2.push_str(") = ::dolphine::serde_json::from_str(&input)?;"); // change unwrap to result
     s.push_str(&s2);
     // dbg!(&s);
 
