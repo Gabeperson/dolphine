@@ -113,6 +113,21 @@ pub fn function(
     let stmt: Stmt = syn::parse(TokenStream::from_str(&s).unwrap()).unwrap();
     func.block.stmts.insert(0, stmt);
     }
+    let stmt: Stmt = syn::parse(TokenStream::from_str("
+    let t = |input| {
+
+    ").unwrap()).unwrap();
+
+    let stmt2: Stmt = syn::parse(TokenStream::from_str("
+    }(input);
+    match t {
+        Ok(v) => return ::dolphine::serde_json::from_str(&v),
+        Err(e) => return Err(e),
+    };
+    
+    ").unwrap()).unwrap();
+    func.block.stmts.insert(0, stmt);
+    func.block.stmts.push(stmt2);
     //println!("{:?}", func.sig.inputs.into_token_stream());
     //dbg!("Got here");
     let q = quote!(#func);
