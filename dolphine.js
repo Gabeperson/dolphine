@@ -37,7 +37,7 @@ const dolphine = {
                   promise.reject(receivedData.data)
                   return;
             }
-            promise.resolve(receivedData.data);
+            promise.resolve(JSON.parse(receivedData.data));
             return;
       },
 

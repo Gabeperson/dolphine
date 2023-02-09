@@ -1,14 +1,14 @@
 use browsers::open_browser;
 use futures_util::{future, SinkExt, StreamExt, TryStreamExt};
-pub use include_dir::{Dir, include_dir};
+pub use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
 use rocket;
 use rocket::get;
 use rocket::http::ContentType;
+pub use rocket::main;
 use rocket::routes;
 use rocket::State;
 use serde::{Deserialize, Serialize};
-pub use rocket::main;
 pub use serde_json;
 use serde_repr::*;
 use std::collections::HashMap;
@@ -24,9 +24,9 @@ use tokio_tungstenite::tungstenite::Message;
 mod browsers;
 pub use browsers::Browser;
 //extern crate macros;
-pub use macros::function;
 pub use eyre::Report;
-
+pub use macros::async_function;
+pub use macros::function;
 
 type Function = fn(String) -> Result<String, Report>;
 
@@ -226,21 +226,6 @@ impl StateManager {
             websocket_path: wp,
         }
     }
-}
-
-#[macro_export]
-macro_rules! async_function {
-    ($func_name: ident) => {
-        |input| {
-            $crate::tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {
-                    return $func_name(input).await;
-                })
-        }
-    };
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
