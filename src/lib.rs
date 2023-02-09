@@ -48,6 +48,17 @@ pub struct Dolphine {
     id: usize,
 }
 
+/*
+TODO:
+Hide cmd window
+Exit handler
+ping pong keep alive
+
+
+
+
+*/
+
 #[derive(Clone, Debug)]
 enum TypeSource {
     LocalFolder,
