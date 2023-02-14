@@ -81,26 +81,35 @@ pub fn function(_args: TokenStream, item: TokenStream) -> TokenStream {
 
         let start = format!(
             "
-            let t = (|input: String| {}{{
+            let t = (|{}| {}{{
         ",
+            if length != 0 {
+                "input: String"
+            } else {
+                ""
+            },
             return_type.to_string()
         );
 
         println!("{}", return_type.to_string());
 
-        let end = "
-            })(input);
-            match t {
-                Ok(v) => {
-                    let r = ::dolphine::serde_json::to_string(&v);
-                    match r {
-                        Ok(s) => return Ok(s),
-                        Err(e) => return Err(Report::new(e)),
-                    }
-                },
-                Err(e) => return Err(e),
-            };
-        ";
+        let end = format!("
+        }})({}}});
+        match t {{
+            Ok(v) => {{
+                let r = ::dolphine::serde_json::to_string(&v);
+                match r {{
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(Report::new(e)),
+                }}
+            }},
+            Err(e) => return Err(e),
+        }};
+        ", if length != 0 {
+            "input"
+        } else {
+            ""
+        });
 
         let block = format!("{{{}{}{}}}", start, block, end);
         let s: Block = syn::parse(TokenStream::from_str(&block).unwrap()).unwrap();
@@ -197,25 +206,34 @@ pub fn async_function(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     let start = format!(
         "
-        let t = (|input: String| {}{{
+        let t = (|{}| {}{{
     ",
+        if length != 0 {
+            "input: String"
+        } else {
+            ""
+        },
         return_type.to_string()
     );
 
     //println!("{}", return_type.to_string());
-    let end = "
-        })(input);
-        match t {
-            Ok(v) => {
+    let end = format!("
+        }})({}}});
+        match t {{
+            Ok(v) => {{
                 let r = ::dolphine::serde_json::to_string(&v);
-                match r {
+                match r {{
                     Ok(s) => return Ok(s),
                     Err(e) => return Err(Report::new(e)),
-                }
-            },
+                }}
+            }},
             Err(e) => return Err(e),
-        };
-    ";
+        }};
+    ", if length != 0 {
+        "input"
+    } else {
+        ""
+    });
 
     let block = format!("{{{}{}{}}}", start, block, end);
     //println!("{}", &block);
