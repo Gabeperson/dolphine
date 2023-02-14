@@ -339,10 +339,10 @@ fn get_file(path: &str, statemanager: &State<StateManager>) -> Option<(ContentTy
 }
 
 async fn accept_connection(stream: TcpStream, functions: HashMap<String, (usize, Function)>) {
-    //let addr = stream
-    //.peer_addr()
-    //.expect("connected streams should have a peer address");
-    //println!("Peer address: {}", addr);
+    let addr = stream
+        .peer_addr()
+        .expect("connected streams should have a peer address");
+        println!("Peer address: {}", addr);
 
     let ws_stream = tokio_tungstenite::accept_async(stream)
         .await
