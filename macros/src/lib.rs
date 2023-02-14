@@ -131,11 +131,11 @@ pub fn async_function(_args: TokenStream, item: TokenStream) -> TokenStream {
     let mut ps: Punctuated<FnArg, Token!(,)> = Punctuated::new();
     let length = inputs.len();
     let mut s_v = vec![];
-    if length != 0 {
-        let to_put_at_args: FnArg =
+    let to_put_at_args: FnArg =
             syn::parse(TokenStream::from_str("input: String").unwrap()).unwrap();
         ps.push(to_put_at_args);
         func.sig.inputs = ps;
+    if length != 0 {
         let mut s = String::from("let (");
         let mut s2 = String::from(": (");
         for arg in inputs.iter() {
