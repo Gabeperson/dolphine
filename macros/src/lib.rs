@@ -94,7 +94,7 @@ pub fn function(_args: TokenStream, item: TokenStream) -> TokenStream {
         println!("{}", return_type.to_string());
 
         let end = format!("
-        }})({}}});
+        }})({});
         match t {{
             Ok(v) => {{
                 let r = ::dolphine::serde_json::to_string(&v);
@@ -218,7 +218,7 @@ pub fn async_function(_args: TokenStream, item: TokenStream) -> TokenStream {
 
     //println!("{}", return_type.to_string());
     let end = format!("
-        }})({}}});
+        }})({});
         match t {{
             Ok(v) => {{
                 let r = ::dolphine::serde_json::to_string(&v);
