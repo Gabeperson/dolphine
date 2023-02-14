@@ -166,60 +166,61 @@ pub fn async_function(_args: TokenStream, item: TokenStream) -> TokenStream {
         let stmt: Stmt = syn::parse(TokenStream::from_str(&s).unwrap()).unwrap();
         func.block.stmts.insert(0, stmt);
 
-        // wrapper function shenanigans
-        let return_type = func.sig.output.clone();
-        let return_type = quote!(#return_type);
-        let return_type_outer: ReturnType =
-            syn::parse(TokenStream::from_str("-> Result<String, ::dolphine::Report>").unwrap())
-                .unwrap();
-        func.sig.output = return_type_outer;
-        let block = func.block.clone();
-        let block = quote!(#block).to_string();
-        let block = block.trim().to_string();
-        let mut it = block.chars();
-        it.next();
-        it.next_back();
-        let block: String = it.collect();
-
-        let block = format!(
-            "
-            ::dolphine::tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(async {{
-                    {}
-                }})",
-            block
-        );
-
-        let start = format!(
-            "
-            let t = (|input: String| {}{{
-        ",
-            return_type.to_string()
-        );
-
-        //println!("{}", return_type.to_string());
-        let end = "
-            })(input);
-            match t {
-                Ok(v) => {
-                    let r = ::dolphine::serde_json::to_string(&v);
-                    match r {
-                        Ok(s) => return Ok(s),
-                        Err(e) => return Err(Report::new(e)),
-                    }
-                },
-                Err(e) => return Err(e),
-            };
-        ";
-
-        let block = format!("{{{}{}{}}}", start, block, end);
-        println!("{}", &block);
-        let s: Block = syn::parse(TokenStream::from_str(&block).unwrap()).unwrap();
-        func.block = Box::new(s);
+        
     }
+    // wrapper function shenanigans
+    let return_type = func.sig.output.clone();
+    let return_type = quote!(#return_type);
+    let return_type_outer: ReturnType =
+        syn::parse(TokenStream::from_str("-> Result<String, ::dolphine::Report>").unwrap())
+            .unwrap();
+    func.sig.output = return_type_outer;
+    let block = func.block.clone();
+    let block = quote!(#block).to_string();
+    let block = block.trim().to_string();
+    let mut it = block.chars();
+    it.next();
+    it.next_back();
+    let block: String = it.collect();
+
+    let block = format!(
+        "
+        ::dolphine::tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {{
+                {}
+            }})",
+        block
+    );
+
+    let start = format!(
+        "
+        let t = (|input: String| {}{{
+    ",
+        return_type.to_string()
+    );
+
+    //println!("{}", return_type.to_string());
+    let end = "
+        })(input);
+        match t {
+            Ok(v) => {
+                let r = ::dolphine::serde_json::to_string(&v);
+                match r {
+                    Ok(s) => return Ok(s),
+                    Err(e) => return Err(Report::new(e)),
+                }
+            },
+            Err(e) => return Err(e),
+        };
+    ";
+
+    let block = format!("{{{}{}{}}}", start, block, end);
+    //println!("{}", &block);
+    let s: Block = syn::parse(TokenStream::from_str(&block).unwrap()).unwrap();
+    func.block = Box::new(s);
 
     let q = quote!(#func);
     return q.into();
