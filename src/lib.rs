@@ -310,7 +310,7 @@ fn get_file(path: &str, statemanager: &State<StateManager>) -> Option<(ContentTy
         Source::Static(f) => {
             let file_hashmap = DIRS.read().unwrap();
             if let Some(f) = file_hashmap.get(f) {
-                if let Some(file) = f.get_file("index.html") {
+                if let Some(file) = f.get_file(path) {
                     if let Some(ext) = path.split(".").last() {
                         let s = file.contents();
                         if let Some(content_type) = ContentType::from_extension(ext) {
