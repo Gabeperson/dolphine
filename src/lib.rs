@@ -1,4 +1,3 @@
-use browsers::open_browser;
 use futures_util::{future, SinkExt, StreamExt, TryStreamExt};
 pub use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
@@ -86,12 +85,7 @@ impl Dolphine {
         }
     }
 
-    pub fn open_page(&self, b: Browser) {
-        open_browser(
-            b,
-            format!("{}:{}", self.http_addr.to_string(), self.webserver_port),
-        );
-    }
+
 
     pub async fn block(&self) {
         tokio::signal::ctrl_c()
