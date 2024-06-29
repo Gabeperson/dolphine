@@ -20,8 +20,6 @@ pub use tokio;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite;
 use tokio_tungstenite::tungstenite::Message;
-mod browsers;
-pub use browsers::Browser;
 //extern crate macros;
 pub use eyre::Report;
 pub use macros::async_function;
