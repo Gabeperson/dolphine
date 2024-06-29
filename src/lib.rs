@@ -291,7 +291,7 @@ fn index(statemanager: &State<StateManager>) -> Option<(ContentType, String)> {
 #[get("/<path>")]
 fn get_file(path: &str, statemanager: &State<StateManager>) -> Option<(ContentType, Vec<u8>)> {
     if path == statemanager.serve_path {
-        let mut resp = include_bytes!("..\\dolphine.js").to_vec();
+        let mut resp = include_bytes!("..\dolphine.js").to_vec();
         let js_code = format!(
             "\ndolphine._socket = {};\ndolphine._init();",
             statemanager.websocket_path
